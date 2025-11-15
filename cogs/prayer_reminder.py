@@ -11,7 +11,7 @@ class PrayerReminder(commands.Cog):
             "adhan_reminder_2.mp3",
             "adhan_reminder_3.mp3"
         ]
-        self.audio_durations = [5, 5, 3]
+        self.audio_durations = [5, 5, 4]
 
         self.test_join_count = 0
         self.test_max_joins = 3
@@ -27,7 +27,7 @@ class PrayerReminder(commands.Cog):
             play_time = self.audio_durations[self.test_join_count]
 
             vc = await channel.connect()
-            vc.play(FFmpegPCMAudio(audio_file))  # no hardcoded ffmpeg path
+            vc.play(FFmpegPCMAudio(audio_file))
             await asyncio.sleep(play_time)
             await vc.disconnect()
 
