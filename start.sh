@@ -1,4 +1,7 @@
-#!/bin/bash
+#!/bin/sh
+# Install ffmpeg
 apt-get update
 apt-get install -y ffmpeg
-python3 bot.py
+
+# Start the bot
+python bot.py
