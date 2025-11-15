@@ -2,12 +2,10 @@ import discord
 from discord.ext import commands, tasks
 import asyncio
 from discord import FFmpegPCMAudio
-import os
 
 class PrayerReminder(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.audio_path = "audio"
         self.audio_files = [
             "adhan_reminder_1.mp3",
             "adhan_reminder_2.mp3",
@@ -15,42 +13,45 @@ class PrayerReminder(commands.Cog):
         ]
         self.audio_durations = [5, 5, 3]
 
-        self.test_count = 0
-        self.max_tests = 3
+        self.test_join_count = 0
+        self.test_max_joins = 3
         self.test_interval = 5
-        self.test_loop.start()
+        self.test_joining.start()
 
-    async def join_and_play(self, channel, file_index):
-        if channel.guild.voice_client:
+    async def join_and_play(self, channel):
+        """Join a voice channel, play audio, then disconnect."""
+        if channel.guild.voice_client:  # already connected
             return
         try:
-            ffmpeg_path = "ffmpeg"  # Railway-compatible
-            audio_file = os.path.join(self.audio_path, self.audio_files[file_index])
-            vc = await channel.connect()
-            vc.play(FFmpegPCMAudio(audio_file, executable=ffmpeg_path))
-            await asyncio.sleep(self.audio_durations[file_index])
-            await vc.disconnect()
-            print(f"Played {self.audio_files[file_index]} in {channel.name}")
-        except Exception as e:
-            print(f"Error: {e}")
+            audio_file = self.audio_files[self.test_join_count]
+            play_time = self.audio_durations[self.test_join_count]
 
-    async def join_channels(self, guild):
+            vc = await channel.connect()
+            vc.play(FFmpegPCMAudio(audio_file))  # no hardcoded ffmpeg path
+            await asyncio.sleep(play_time)
+            await vc.disconnect()
+
+            print(f"Finished join #{self.test_join_count + 1} in {channel.name}")
+            self.test_join_count += 1
+        except Exception as e:
+            print(f"Error in {channel.name}: {e}")
+
+    async def join_channels_with_members(self, guild):
         for channel in guild.voice_channels:
             if len(channel.members) > 0:
-                await self.join_and_play(channel, self.test_count)
-                self.test_count += 1
-                if self.test_count >= self.max_tests:
+                await self.join_and_play(channel)
+                if self.test_join_count >= self.test_max_joins:
                     return
 
     @tasks.loop(seconds=10)
-    async def test_loop(self):
-        if self.test_count >= self.max_tests:
-            print("Test complete")
-            self.test_loop.stop()
+    async def test_joining(self):
+        if self.test_join_count >= self.test_max_joins:
+            print("Test complete. Stopping loop.")
+            self.test_joining.stop()
             return
         for guild in self.bot.guilds:
-            await self.join_channels(guild)
-            if self.test_count < self.max_tests:
+            await self.join_channels_with_members(guild)
+            if self.test_join_count < self.test_max_joins:
                 await asyncio.sleep(self.test_interval)
 
 async def setup(bot):
